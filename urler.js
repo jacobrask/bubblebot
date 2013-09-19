@@ -42,9 +42,9 @@ Urler.prototype.lookForUrl = function (msg) {
       var title = '';
       if (~res.headers['content-type'].indexOf('html')) {
         title = cheerio.load(body)('title').text();
-        title.replace(/\s/g, ' ');
-        title.replace(/(\s)\s+/g, ' ');
-        title.trim();
+        title = title.replace(/\s/g, ' ');
+        title = title.replace(/(\s)\s+/g, ' ');
+        title = title.trim();
       }
       this.emit('url', url, title, msg);
     }.bind(this));
