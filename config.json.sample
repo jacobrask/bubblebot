@@ -1,0 +1,26 @@
+{
+  "server": "",
+  "nick": "",
+  "channels": [ "" ],
+  "userName": "",
+  "realName": "",
+  "urler": {
+    "db": {
+      "url": "localhost",
+      "auth": {
+        "username": "",
+        "password": ""
+      },
+      "name": "",
+      "port": 5984
+    }
+  },
+  "mailpix": {
+    "s3": {
+      "key": "",
+      "secret": "",
+      "bucket": "",
+      "path": "/ircpix/"
+    }
+  }
+}
