@@ -5,6 +5,7 @@ var request = require('request');
 var tinyurl = require('nj-tinyurl');
 var _ = require('underscore');
 var util = require('util');
+var urlsFrom = require('urlsfrom');
 
 
 // Pretty lazy matching. If we match something that's not an URL, we notice
@@ -24,31 +25,14 @@ var Urler = function (opts) {
 };
 util.inherits(Urler, events.EventEmitter);
 
-Urler.prototype.getUrl = function (str) {
-  var match = new RegExp(URL_RE).exec(str);
-  if (match == null) return;
-  match = match[0];
-  // Prefix protocol-less matches
-  if (!/^http/.test(match)) match = 'http://' + match;
-  return match;
-};
-
 Urler.prototype.lookForUrl = function (msg) {
-  var url;
-  if (url = this.getUrl(msg.text)) {
-    request(url, function (err, res, body) {
-      // Invalid URl, just ignore
-      if (err) return;
-      var title = '';
-      if (~res.headers['content-type'].indexOf('html')) {
-        title = cheerio.load(body)('title').text();
-        title = title.replace(/\s/g, ' ');
-        title = title.replace(/(\s)\s+/g, ' ');
-        title = title.trim();
-      }
-      this.emit('url', url, title, msg);
-    }.bind(this));
-  }
+  var self = this;
+  urlsFrom(msg.text, { title: true }, function (err, urls) {
+    urls.forEach(function (url) {
+      url.title = url.title.replace(/\s/g, ' ').replace(/(\s)\s+/g, ' ').trim();
+      self.emit('url', url.href, url.title, msg);
+    });
+  });
 };
 
 Urler.prototype.shorten = function (url, cb) {
