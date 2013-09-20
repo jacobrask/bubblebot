@@ -122,12 +122,15 @@ bot.on('message#', function (nick, channel, text) {
     switch (cmd) {
       case commands.GETQUOTEBYNUM: quoter.getByNum(arg, cb); break;
       case commands.GETRANDQUOTE: quoter.getRand(cb); break;
-      case commands.SEARCHQUOTES: quoter.search(arg, cb); break;
+      //case commands.SEARCHQUOTES: quoter.search(arg, cb); break;
       case commands.GETLASTQUOTE: quoter.getLast(cb); break;
       default: break;
     }
   } else if (cmd === commands.ADDQUOTE) {
-    quoter.add(arg);
+    quoter.add(arg, nick, function (err, num) {
+      if (err != null) bot.say(channel, 'Failed to add quote: '+err);
+      bot.say(channel, '\u0002'+num+'\u0002 added');
+    });
   }
 });
 
