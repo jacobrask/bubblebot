@@ -128,7 +128,7 @@ bot.on('message#', function (nick, channel, text) {
     }
   } else if (cmd === commands.ADDQUOTE) {
     quoter.add(arg, nick, function (err, num) {
-      if (err != null) bot.say(channel, 'Failed to add quote: '+err);
+      if (err != null) return bot.say(channel, 'Failed to add quote: '+err.message);
       bot.say(channel, '\u0002'+num+'\u0002 added');
     });
   }
