@@ -1,5 +1,8 @@
+'use strict';
+
 var path = require('path');
 var config = require('./config');
+var _ = require('underscore');
 
 var irc = require('irc');
 var bot = new irc.Client(config.server, config.nick, {
@@ -53,3 +56,79 @@ urler.on('urldupe', function (url, title, nicks, msg) {
 });
 
 urler.on('error', function (err) { log('[URLER] '+err); });
+
+
+/*
+ * Quote plugin
+ */
+var QuoteDB = require('./quotes');
+
+var quoter = new QuoteDB({
+  db_url: config.quotes.db.url,
+  db_name: config.quotes.db.name,
+  db_port: config.quotes.db.port,
+  db_auth: config.quotes.db.auth
+});
+
+const commands = {
+  INVALID: -1,
+  GETQUOTEBYNUM: 1,
+  GETRANDQUOTE: 2,
+  SEARCHQUOTES: 3,
+  GETLASTQUOTE: 4,
+  ADDQUOTE: 5
+};
+
+var parseQuoteCommand = function (text) {
+  var parsed = /^!(\w+)(.*)?/.exec(text);
+  if (parsed == null) return [ commands.INVALID ];
+  var cmd = parsed[1];
+  var arg = parsed[2];
+  if (cmd === 'bq') {
+    if (arg == null || !arg.trim()) return [ commands.GETRANDQUOTE ];
+    arg = arg.trim();
+    if (arg == parseInt(arg, 10)) {
+      return [ commands.GETQUOTEBYNUM, parseInt(arg, 10) ];
+    }
+    return [ commands.SEARCHQUOTES, arg ];
+  } else if (cmd === 'bqlast') {
+    return [ commands.GETLASTQUOTE ];
+  } else if (cmd === 'baddquote') {
+    return [ commands.ADDQUOTE, arg ];
+  }
+};
+
+bot.on('message#', function (nick, channel, text) {
+  if (text[0] !== '!') return;
+  var p = parseQuoteCommand(text);
+  if (p == null) return;
+  var cmd = p[0];
+  var arg = p[1];
+  if (cmd >= commands.GETQUOTEBYNUM && cmd <= commands.GETLASTQUOTE) {
+    let cb = function (err, quotes) {
+      if (err != null) return;
+      if (quotes.length === 0) {
+        return bot.say(channel, 'No match for "'+arg+'"');
+      }
+      var quote = quotes[0];
+      if (quotes.length > 1) {
+        let nums = _.pluck(quotes, 'num');
+        bot.say(channel, quotes.length + ' matches: '+nums.join(', '));
+        // Random
+        quote = quotes[Math.floor(Math.random()*quotes.length)];
+      }
+      bot.say(channel, '[\u0002'+quote.num+'\u0002] '+quote.text);
+    };
+    switch (cmd) {
+      case commands.GETQUOTEBYNUM: quoter.getByNum(arg, cb); break;
+      case commands.GETRANDQUOTE: quoter.getRand(cb); break;
+      case commands.SEARCHQUOTES: quoter.search(arg, cb); break;
+      case commands.GETLASTQUOTE: quoter.getLast(cb); break;
+      default: break;
+    }
+  } else if (cmd === commands.ADDQUOTE) {
+    quoter.add(arg);
+  }
+});
+
+bot.connect();
