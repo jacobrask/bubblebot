@@ -1,19 +1,10 @@
-var si = require('search-index');
 var cradle = require('cradle');
+var reds = require('reds');
 
 var QuoteDB = function (opts) {
   var conn = new cradle.Connection(opts.db_url, opts.db_port, { auth: opts.db_auth });
   this.db = conn.database(opts.db_name);
-  this.buildIndex();
-};
-
-QuoteDB.prototype.buildIndex = function () {
-  this.db.view('search/text', function (err, doc) {
-    if (err != null) return;
-    si.index(JSON.stringify(doc.rows), 'quotes', ['id'], function (err) {
-      console.log(arguments);
-    });
-  });
+  this.reds = reds.createSearch('quotes');
 };
 
 QuoteDB.prototype.getByNum = function (num, cb) {
@@ -56,9 +47,24 @@ QuoteDB.prototype.add = function (text, adder, cb) {
       num: last + 1,
       date: Date.now()
     };
-    this.db.save(quote, function (err) {
-      if (err != null) cb(err);
+    this.db.save(quote, function (err, res) {
+      if (err != null) return cb(err);
       cb(null, last + 1);
+      this.reds.index(text, res.id);
+    }.bind(this));
+  }.bind(this));
+};
+
+QuoteDB.prototype.search = function (term, cb) {
+  this.reds.query(term).end(function (err, ids) {
+    if (err != null) return cb(err);
+    this.db.get(ids, function (err, docs) {
+      if (err != null) return cb(err);
+      var quotes = docs.map(function (doc) {
+        console.log(doc);
+        return { num: doc.num, text: doc.text };
+      });
+      cb(null, quotes);
     });
   }.bind(this));
 };
