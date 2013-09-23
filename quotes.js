@@ -1,8 +1,19 @@
+var si = require('search-index');
 var cradle = require('cradle');
 
 var QuoteDB = function (opts) {
   var conn = new cradle.Connection(opts.db_url, opts.db_port, { auth: opts.db_auth });
   this.db = conn.database(opts.db_name);
+  this.buildIndex();
+};
+
+QuoteDB.prototype.buildIndex = function () {
+  this.db.view('search/text', function (err, doc) {
+    if (err != null) return;
+    si.index(JSON.stringify(doc.rows), 'quotes', ['id'], function (err) {
+      console.log(arguments);
+    });
+  });
 };
 
 QuoteDB.prototype.getByNum = function (num, cb) {
@@ -52,20 +63,4 @@ QuoteDB.prototype.add = function (text, adder, cb) {
   }.bind(this));
 };
 
-QuoteDB.prototype.search = function (str, cb) {
-  str = str.toLowerCase();
-  this.db.temporaryView({
-    map: function (doc) {
-      if (doc.text.toLowerCase().indexOf(str) !== -1) {
-        emit(doc.num, doc.text);
-      }
-    }}, function (err, doc) {
-      if (err) return console.log(err);
-      if (doc.rows.length === 0) return cb(null, []);
-      cb(null, doc.rows.map(function (row) {
-        return { num: row.key, text: row.value };
-      }));
-    }
-  );
-};
 exports = module.exports = QuoteDB;

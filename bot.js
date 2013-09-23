@@ -1,18 +1,19 @@
 'use strict';
 
-var path = require('path');
-var config = require('./config');
-var _ = require('underscore');
+const path = require('path');
+const config = require('./config');
+const _ = require('underscore');
 
-var irc = require('irc');
-var bot = new irc.Client(config.server, config.nick, {
+const irc = require('irc');
+
+const bot = new irc.Client(config.server, config.nick, {
   autoConnect: false,
   channels: config.channels,
   userName: config.userName,
   realName: config.realName
 });
 
-var log = function (msg) {
+const log = function (msg) {
   console.log(msg);
 };
 
@@ -31,9 +32,9 @@ bot.on('error', function (err) {
  * URLer plugin
  * Looks for valid URLs in messages and saves them to a database.
  */
-var Urler = require('./urler');
+const Urler = require('./urler');
 
-var urler = new Urler({
+const urler = new Urler({
   db_url: config.urler.db.url,
   db_name: config.urler.db.name,
   db_port: config.urler.db.port,
@@ -61,9 +62,9 @@ urler.on('error', function (err) { log('[URLER] '+err); });
 /*
  * Quote plugin
  */
-var QuoteDB = require('./quotes');
+const QuoteDB = require('./quotes');
 
-var quoter = new QuoteDB({
+const quoter = new QuoteDB({
   db_url: config.quotes.db.url,
   db_name: config.quotes.db.name,
   db_port: config.quotes.db.port,
@@ -79,40 +80,40 @@ const commands = {
   ADDQUOTE: 5
 };
 
-var parseQuoteCommand = function (text) {
-  var parsed = /^!(\w+)(.*)?/.exec(text);
+const parseQuoteCommand = function (text) {
+  let parsed = /^!(\w+)(.*)?/.exec(text);
   if (parsed == null) return [ commands.INVALID ];
-  var cmd = parsed[1];
-  var arg = parsed[2];
-  if (cmd === 'bq') {
+  let cmd = parsed[1];
+  let arg = parsed[2];
+  if (cmd === 'q') {
     if (arg == null || !arg.trim()) return [ commands.GETRANDQUOTE ];
     arg = arg.trim();
     if (arg == parseInt(arg, 10)) {
       return [ commands.GETQUOTEBYNUM, parseInt(arg, 10) ];
     }
     return [ commands.SEARCHQUOTES, arg ];
-  } else if (cmd === 'bqlast') {
+  } else if (cmd === 'qlast') {
     return [ commands.GETLASTQUOTE ];
-  } else if (cmd === 'baddquote') {
+  } else if (cmd === 'addquote') {
     return [ commands.ADDQUOTE, arg ];
   }
 };
 
 bot.on('message#', function (nick, channel, text) {
   if (text[0] !== '!') return;
-  var p = parseQuoteCommand(text);
+  let p = parseQuoteCommand(text);
   if (p == null) return;
-  var cmd = p[0];
-  var arg = p[1];
+  let cmd = p[0];
+  let arg = p[1];
   if (cmd >= commands.GETQUOTEBYNUM && cmd <= commands.GETLASTQUOTE) {
-    let cb = function (err, quotes) {
+    const cb = function (err, quotes) {
       if (err != null) return;
       if (quotes.length === 0) {
         return bot.say(channel, 'No match for "'+arg+'"');
       }
-      var quote = quotes[0];
+      let quote = quotes[0];
       if (quotes.length > 1) {
-        let nums = _.pluck(quotes, 'num');
+        const nums = _.pluck(quotes, 'num');
         bot.say(channel, quotes.length + ' matches: '+nums.join(', '));
         // Random
         quote = quotes[Math.floor(Math.random()*quotes.length)];
@@ -122,7 +123,7 @@ bot.on('message#', function (nick, channel, text) {
     switch (cmd) {
       case commands.GETQUOTEBYNUM: quoter.getByNum(arg, cb); break;
       case commands.GETRANDQUOTE: quoter.getRand(cb); break;
-      //case commands.SEARCHQUOTES: quoter.search(arg, cb); break;
+      // case commands.SEARCHQUOTES: quoter.search(arg, cb); break;
       case commands.GETLASTQUOTE: quoter.getLast(cb); break;
       default: break;
     }
