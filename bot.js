@@ -1,11 +1,14 @@
 'use strict';
 
 var path = require('path');
-var config = require('./config2');
 var _ = require('underscore');
 
-var irc = require('irc');
+var winston = require('winston');
+winston.add(winston.transports.File, { filename: 'bot.log' });
 
+var config = require('./config');
+
+var irc = require('irc');
 var bot = new irc.Client(config.server, config.nick, {
   autoConnect: false,
   channels: config.channels,

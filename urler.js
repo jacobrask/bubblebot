@@ -1,20 +1,9 @@
-var cheerio = require('cheerio');
 var cradle = require('cradle');
 var events = require("events");
-var request = require('request');
 var tinyurl = require('nj-tinyurl');
 var _ = require('underscore');
-var util = require('util');
 var urlsFrom = require('urlsfrom');
-
-
-// Pretty lazy matching. If we match something that's not an URL, we notice
-// when we try to GET it anyway.
-var URL_RE = new RegExp('(https?:\\/\\/)?'+ // protocol
-  '((([a-z\\d]([a-z\\d-]*[a-z\\d])*)\\.)+[a-z]{2,}|'+ // domain name
-  '((\\d{1,3}\\.){3}\\d{1,3}))'+ // OR ip (v4) address
-  '(\\:\\d+)?(\\/[-a-z\\d%_.~+]*)*'+ // port and path
-  '(\\?[;&a-z\\d%_.~+=-]*)?', 'gi'); // query string
+var util = require('util');
 
 var Urler = function (opts) {
   events.EventEmitter.call(this);
