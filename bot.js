@@ -108,7 +108,7 @@ bot.on('message#', function (nick, channel, text) {
   var arg = p[1];
   if (cmd >= commands.GETQUOTEBYNUM && cmd <= commands.GETLASTQUOTE) {
     var cb = function (err, quotes) {
-      if (err != null) return log.warn(err.message);
+      if (err != null) return log.warn(err);
       if (quotes.length === 0) {
         return bot.say(channel, 'No match for "'+arg+'"');
       }
@@ -131,8 +131,8 @@ bot.on('message#', function (nick, channel, text) {
   } else if (cmd === commands.ADDQUOTE) {
     quoter.add(arg, nick, function (err, num) {
       if (err != null) {
-        log.error(err.message);
-        return bot.say(channel, 'Failed to add quote: '+err.message);
+        log.error(err);
+        return bot.say(channel, 'Failed to add quote: '+err);
       }
       bot.say(channel, '\u0002'+num+'\u0002 added');
     });
