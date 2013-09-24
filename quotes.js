@@ -4,7 +4,7 @@ var reds = require('reds');
 var QuoteDB = function (opts) {
   var conn = new cradle.Connection(opts.db_url, opts.db_port, { auth: opts.db_auth });
   this.db = conn.database(opts.db_name);
-  this.reds = reds.createSearch('quotes');
+  this.reds = reds.createSearch(opts.db_name);
 };
 
 QuoteDB.prototype.getByNum = function (num, cb) {
