@@ -61,7 +61,6 @@ QuoteDB.prototype.search = function (term, cb) {
     this.db.get(ids, function (err, docs) {
       if (err != null) return cb(err);
       var quotes = docs.map(function (doc) {
-        console.log(doc);
         return { num: doc.num, text: doc.text };
       });
       cb(null, quotes);

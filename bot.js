@@ -114,9 +114,6 @@ bot.on('message#', function (nick, channel, text) {
       }
       var quote = quotes[0];
       if (quotes.length > 1) {
-        var nums = _.pluck(quotes, 'num');
-        bot.say(channel, quotes.length + ' matches: '+nums.join(', '));
-        // Random
         quote = quotes[Math.floor(Math.random()*quotes.length)];
       }
       bot.say(channel, '[\u0002'+quote.num+'\u0002] '+quote.text);
