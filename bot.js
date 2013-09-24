@@ -5,6 +5,7 @@ var _ = require('underscore');
 
 var winston = require('winston');
 winston.add(winston.transports.File, { filename: 'bot.log' });
+var log = winston;
 
 var config = require('./config');
 
@@ -16,20 +17,15 @@ var bot = new irc.Client(config.server, config.nick, {
   realName: config.realName
 });
 
-var log = function (msg) {
-  console.log(msg);
-};
-
 bot.on('registered', function (msg) {
-  console.info('[IRC] Connected to ' + msg.server);
+  log.info('Connected to ' + msg.server);
 });
 bot.on('join', function (channel, nick) {
-  if (nick === config.nick) console.info('[IRC] Joined ' + channel);
+  if (nick === config.nick) log.info('Joined ' + channel);
 });
 bot.on('error', function (err) {
-  log('[IRC]' + err);
+  log.error(err.message);
 });
-
 
 /*
  * URLer plugin
@@ -59,7 +55,9 @@ urler.on('urldupe', function (url, title, nicks, msg) {
   bot.say(msg.channel, url+' \u0002OLDNEWS\u0002 ('+nicks.join(', ')+')');
 });
 
-urler.on('error', function (err) { log('[URLER] '+err); });
+urler.on('error', function (err) {
+  log.error(err.message);
+});
 
 
 /*
@@ -110,7 +108,7 @@ bot.on('message#', function (nick, channel, text) {
   var arg = p[1];
   if (cmd >= commands.GETQUOTEBYNUM && cmd <= commands.GETLASTQUOTE) {
     var cb = function (err, quotes) {
-      if (err != null) return;
+      if (err != null) log.warn(err.message);
       if (quotes.length === 0) {
         return bot.say(channel, 'No match for "'+arg+'"');
       }
@@ -132,7 +130,10 @@ bot.on('message#', function (nick, channel, text) {
     }
   } else if (cmd === commands.ADDQUOTE) {
     quoter.add(arg, nick, function (err, num) {
-      if (err != null) return bot.say(channel, 'Failed to add quote: '+err.message);
+      if (err != null) {
+        log.error(err.message);
+        return bot.say(channel, 'Failed to add quote: '+err.message);
+      }
       bot.say(channel, '\u0002'+num+'\u0002 added');
     });
   }

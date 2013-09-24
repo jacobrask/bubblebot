@@ -14,9 +14,10 @@ var Urler = function (opts) {
 };
 util.inherits(Urler, events.EventEmitter);
 
-Urler.prototype.lookForUrl = function (msg) {
+Urler.prototype.lookForUrl = function (msg, cb) {
   var self = this;
   urlsFrom(msg.text, { title: true }, function (err, urls) {
+    if (err != null) return cb(err);
     urls.forEach(function (url) {
       url.title = url.title.replace(/\s/g, ' ').replace(/(\s)\s+/g, ' ').trim();
       self.emit('url', url.href, url.title, msg);
@@ -29,7 +30,7 @@ Urler.prototype.shorten = function (url, cb) {
     cb(null, url);
   } else {
     tinyurl.shorten(url, function (err, shorturl) {
-      if (err) cb(err);
+      if (err) cb(null, url);
       else cb(null, shorturl);
     });
   }
