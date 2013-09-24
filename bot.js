@@ -108,7 +108,7 @@ bot.on('message#', function (nick, channel, text) {
   var arg = p[1];
   if (cmd >= commands.GETQUOTEBYNUM && cmd <= commands.GETLASTQUOTE) {
     var cb = function (err, quotes) {
-      if (err != null) log.warn(err.message);
+      if (err != null) return log.warn(err.message);
       if (quotes.length === 0) {
         return bot.say(channel, 'No match for "'+arg+'"');
       }
