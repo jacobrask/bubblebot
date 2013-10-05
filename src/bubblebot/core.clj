@@ -17,8 +17,9 @@
     (doto (Thread. #(conn-handler conn)) (.start))
     conn))
 
-(defn writer [conn msg]
+(defn writer
   "Write a raw message to IRC server"
+  [conn msg]
   (println (str "< " msg))
   (doto (:out @conn)
     (.println (str msg "\r"))
@@ -27,7 +28,7 @@
 (defn conn-handler [conn]
   (while (nil? (:exit @conn))
     (let [msg (.readLine (:in @conn))]
-      ; (println (str "> " msg))
+      (println (str "> " msg))
       (let [[_ from priv chan cmd] (re-find #":(.*)!~.* (PRIVMSG) (.*) :(.*)" msg)]
         (if (not (nil? cmd)) (println (str "> " cmd))))
       (cond 
@@ -36,13 +37,20 @@
        (re-find #"^PING" msg)
         (writer conn (str "PONG " (re-find #":.*" msg)))))))
 
-(defn login [conn user]
+(defn login
   "Login and perform initial commands"
+  [conn user]
   (writer conn (str "NICK " (:nick user)))
   (writer conn (str "USER " (:nick user) " 0 * :" (:name user)))
   (doseq [chan (:channels server)] (writer conn (str "JOIN " chan))))
 
-(defn -main [& args]
+(defn quit
+  "Leave IRC server"
+  [conn]
+  (writer conn "QUIT"))
+
+(defn -main
   "Connect and login"
+  [& args]
   (def irc (connect server))
   (login irc user))
