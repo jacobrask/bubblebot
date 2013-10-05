@@ -1,4 +1,5 @@
 var cradle = require('cradle');
+var _ = require('underscore');
 
 var QuoteDB = function (opts) {
   var conn = new cradle.Connection(opts.db_url, opts.db_port, { auth: opts.db_auth });
@@ -63,6 +64,7 @@ QuoteDB.prototype.search = function (term, cb) {
       ids.push(doc.id);
       return true;
     });
+    quotes = _.pluck(quotes, 'value');
     cb(null, quotes);
   }.bind(this));
 };
