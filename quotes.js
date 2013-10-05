@@ -1,11 +1,8 @@
 var cradle = require('cradle');
-var redisSearch = require('redis-search');
 
 var QuoteDB = function (opts) {
   var conn = new cradle.Connection(opts.db_url, opts.db_port, { auth: opts.db_auth });
   this.db = conn.database(opts.db_name);
-  this.reds = reds.createSearch(opts.db_name);
-  this.rs = redisSearch.createSearch({ service: 'bubblebot', key: 'quotes' });
 };
 
 QuoteDB.prototype.getByNum = function (num, cb) {
@@ -51,21 +48,22 @@ QuoteDB.prototype.add = function (text, adder, cb) {
     this.db.save(quote, function (err, res) {
       if (err != null) return cb(err);
       cb(null, last + 1);
-      this.rs.index(text, res.id);
     }.bind(this));
   }.bind(this));
 };
 
 QuoteDB.prototype.search = function (term, cb) {
-  this.rs.query(term, function (err, ids) {
+  this.db.view('quote/search', { startkey: term, endkey: term + '\u9999' }, function (err, res) {
     if (err != null) return cb(err);
-    this.db.get(ids, function (err, docs) {
-      if (err != null) return cb(err);
-      var quotes = docs.map(function (doc) {
-        return { num: doc.num, text: doc.text };
-      });
-      cb(null, quotes);
+    if (res.rows.length === 0) return cb(null, []);
+    // Unique quotes only
+    var ids = [];
+    var quotes = res.rows.filter(function (doc) {
+      if (ids.indexOf(doc.id) !== -1) return false;
+      ids.push(doc.id);
+      return true;
     });
+    cb(null, quotes);
   }.bind(this));
 };
 

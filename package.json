@@ -10,8 +10,7 @@
     "underscore": "~1.5.1",
     "nj-tinyurl": "~0.1.0",
     "urlsform": "jacobrask/urlsfrom",
-    "winston": "~0.7.2",
-    "redis-search": "0.0.1"
+    "winston": "~0.7.2"
   },
   "devDependencies": {},
   "repository": "",
