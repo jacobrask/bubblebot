@@ -1,4 +1,4 @@
-(ns bubbel.core
+(ns bubblebot.core
   (:import (java.net Socket)
            (java.io PrintWriter InputStreamReader BufferedReader)))
 
@@ -17,8 +17,9 @@
     (doto (Thread. #(conn-handler conn)) (.start))
     conn))
 
-(defn write [conn msg]
+(defn writer [conn msg]
   "Write a raw message to IRC server"
+  (println (str "< " msg))
   (doto (:out @conn)
     (.println (str msg "\r"))
     (.flush)))
@@ -26,18 +27,22 @@
 (defn conn-handler [conn]
   (while (nil? (:exit @conn))
     (let [msg (.readLine (:in @conn))]
-      (println msg)
+      ; (println (str "> " msg))
+      (let [[_ from priv chan cmd] (re-find #":(.*)!~.* (PRIVMSG) (.*) :(.*)" msg)]
+        (if (not (nil? cmd)) (println (str "> " cmd))))
       (cond 
        (re-find #"^ERROR :Closing Link:" msg)
         (dosync (alter conn merge {:exit true}))
        (re-find #"^PING" msg)
-        (write conn (str "PONG "  (re-find #":.*" msg)))))))
+        (writer conn (str "PONG " (re-find #":.*" msg)))))))
 
 (defn login [conn user]
   "Login and perform initial commands"
-  (write conn (str "NICK " (:nick user)))
-  (write conn (str "USER " (:nick user) " 0 * :" (:name user)))
-  (doseq [chan (:channels server)] (write conn (str "JOIN " chan))))
+  (writer conn (str "NICK " (:nick user)))
+  (writer conn (str "USER " (:nick user) " 0 * :" (:name user)))
+  (doseq [chan (:channels server)] (writer conn (str "JOIN " chan))))
 
-(def irc (connect server))
-(login irc user)
+(defn -main [& args]
+  "Connect and login"
+  (def irc (connect server))
+  (login irc user))
