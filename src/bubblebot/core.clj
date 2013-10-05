@@ -33,7 +33,8 @@
     (let [msg (.readLine (:in @conn))]
       (println (str "> " msg))
       (let [[_ from priv chan cmd] (re-find #":(.*)!~.* (PRIVMSG) (.*) :(.*)" msg)]
-        (if-not nil? cmd) (println (str "> " cmd)))
+        (if (not (nil? cmd))
+          (writer conn (irc/msg chan cmd))))
       (cond 
        (re-find #"^ERROR :Closing Link:" msg)
         (dosync (alter conn merge {:exit true}))
@@ -47,8 +48,6 @@
   (writer conn (irc/user (:nick user) (:name user)))
   (doseq [chan (:channels server)] (writer conn (irc/join chan))))
 
-(defn -main
-  "Connect and login"
-  [& args]
+(defn -main [& args]
   (def irc (connect server))
   (login irc user))
