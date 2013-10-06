@@ -6,8 +6,8 @@
 (defn nick [n] (str "NICK " n))
 
 (defn user
-  "Used at the beginning of connection to specify the username,
-   hostname and realname of a new user."
+  "Used at the beginning of a connection to specify the username,
+  hostname and realname of a new user."
   [user realname]
   (str "USER " user " 0 * :" realname))
 

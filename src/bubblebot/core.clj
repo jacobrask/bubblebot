@@ -18,16 +18,16 @@
         in (BufferedReader. (InputStreamReader. (.getInputStream socket)))
         out (PrintWriter. (.getOutputStream socket))
         conn (ref {:in in :out out})]
-    (doto (Thread. #(conn-handler conn)) (.start))
+    (.start (Thread. #(conn-handler conn)))
     conn))
 
 (defn writer
-  "Write a raw message to IRC server"
-  [conn msg]
-  (println (str "< " msg))
-  (doto (:out @conn)
-    (.println (str msg "\r"))
-    (.flush)))
+  "Return a function which writes a raw message to server connection `conn`."
+  [conn]
+    (fn [msg]
+      (doto (:out @conn)
+        (.println (str msg "\r"))
+        (.flush))))
 
 (def RE-LINE #"^(\:\S+.*?|)([^\: ]\S+.*?|)([^\: ]\S+.*?|)(\:\S+.*?|)$")
 
@@ -40,21 +40,23 @@
     (assoc (zipmap [:prefix :cmd :params :msg] cleaned-line) :raw line)))
 
 (defn conn-handler [conn]
-  (while (nil? (:exit @conn))
-    (let [line (parse-line (.readLine (:in @conn)))]
-      (println (:raw line))
-      (cond 
-       (re-find #"^ERROR :Closing Link:" (:raw line))
-        (dosync (alter conn merge {:exit true}))
-       (= (:cmd line) "PING")
-        (writer conn (cmd/pong (:raw line)))))))
+  (let [write (writer conn)]
+    (while (nil? (:exit @conn))
+      (let [line (parse-line (.readLine (:in @conn)))]
+        (println (:raw line))
+        (cond
+         (re-find #"^ERROR :Closing Link:" (:raw line))
+          (dosync (alter conn merge {:exit true}))
+         (= (:cmd line) "PING")
+          (write (cmd/pong (:raw line))))))))
 
 (defn login
   "Login and perform initial commands."
   [conn user]
-  (writer conn (cmd/nick (:nick user)))
-  (writer conn (cmd/user (:nick user) (:name user)))
-  (doseq [chan (:channels server)] (writer conn (cmd/join chan))))
+  (let [write (writer conn)]
+    (write (cmd/nick (:nick user)))
+    (write (cmd/user (:nick user) (:name user)))
+    (doseq [chan (:channels server)] (write (cmd/join chan)))))
 
 (defn -main [& args]
   (login (connect server) user))
