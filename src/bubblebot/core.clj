@@ -4,46 +4,42 @@
   (:require [clojure.string :refer [split trim]]
             [bubblebot.irc-cmd :as cmd]))
 
-; TODO: Read from config
-(def server {:host "irc.freenode.net"
-             :port 6667
-             :channels ["###bubbletest"]})
-(def user {:name "Too Much Bubble" :nick "bubbel-test"})
+
+; TODO: Split out parser to a separate namespace, and make it more comprehensible.
+(def RE-LINE #"^(\:\S+.*?|)([^\: ]\S+.*?|)([^\: ]\S+.*?|)(\:\S+.*?|)$")
+(defn parse-line
+  "Given raw IRC input, returns a parsed map."
+  [line]
+  (let [drop-semicolon (fn [s] (if (.startsWith (str s) ":") (drop 1 s) s))
+        trimmed-line   (for [g (drop 1 (re-find RE-LINE line))] (trim g))
+        cleaned-line   (map #(apply str (drop-semicolon %)) trimmed-line)]
+    (assoc (zipmap [:prefix :cmd :params :msg] cleaned-line) :raw line)))
 
 (declare conn-handler)
 
 (defn connect
-  "Connect to IRC server."
+  "Given a `host`/`port` map, create an IRC socket, returning a map with
+  `in`/`out` streams."
   [server]
   (let [socket (Socket. (:host server) (:port server))
-        in (BufferedReader. (InputStreamReader. (.getInputStream socket)))
-        out (PrintWriter. (.getOutputStream socket))
-        conn (ref {:in in :out out})]
-    (.start (Thread. #(conn-handler conn)))
+        in     (BufferedReader. (InputStreamReader. (.getInputStream socket)))
+        out    (PrintWriter. (.getOutputStream socket))
+        conn   (ref {:in in :out out})]
     conn))
 
 (defn writer
-  "Return a function which writes a raw message to server connection `conn`."
+  "Return a write function to write a raw message to given connection `conn`."
   [conn]
     (fn [msg]
       (doto (:out @conn)
         (.println (str msg "\r"))
         (.flush))))
 
-; TODO: Split out parser to a separate namespace, and make it more comprehensible.
-(def RE-LINE #"^(\:\S+.*?|)([^\: ]\S+.*?|)([^\: ]\S+.*?|)(\:\S+.*?|)$")
-(defn parse-line
-  "Parses raw IRC input to a map."
-  [line]
-  (let [drop-semicolon (fn [s] (if (.startsWith (str s) ":") (drop 1 s) s))
-        trimmed-line (for [g (drop 1 (re-find RE-LINE line))] (trim g))
-        cleaned-line (map #(apply str (drop-semicolon %)) trimmed-line)]
-    (assoc (zipmap [:prefix :cmd :params :msg] cleaned-line) :raw line)))
-
-; Should this function take a list of callbacks?
+; Should take a list of callbacks, applying to different commands.
 (defn conn-handler [conn]
+  "Listen to .readLine from `conn`"
   (let [write (writer conn)]
-    ; XXX: Basically while (true) and a break statement. Looks ugly.
+    ; XXX: Basically while (true) and a break statement. Looks ugly?
     (while (nil? (:exit @conn))
       (let [line (parse-line (.readLine (:in @conn)))]
         (println (:raw line))
@@ -55,16 +51,19 @@
 
 (defn login
   "Login and perform initial commands."
-  [conn user]
+  [conn user server]
   (let [write (writer conn)]
     (write (cmd/nick (:nick user)))
     (write (cmd/user (:nick user) (:name user)))
     (doseq [chan (:channels server)] (write (cmd/join chan)))))
 
 (defn -main [& args]
-  ; connect could take an additional list of callbacks.
-  ; The callbacks comes from loading a number of "plugins"/features.
-  ; That way a single instance can run multiple bots, using different settings
-  ; and plugins.
-  (let [conn (connect server)]
-    (login conn user)))
+  ; TODO: Read from config/args
+  (let [server {:host "irc.freenode.net"
+                :port 6667
+                :channels ["###bubbletest"]}
+        user   {:name "Too Much Bubble" :nick "bubbel-test"}
+        conn   (connect server)]
+    ; Start parsing IRC connection outstream in new thread
+    (.start (Thread. #(conn-handler conn)))
+    (login conn user server)))
