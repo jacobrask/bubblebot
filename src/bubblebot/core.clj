@@ -1,7 +1,8 @@
 (ns bubblebot.core
   (:import (java.net Socket)
            (java.io PrintWriter InputStreamReader BufferedReader))
-  (:require [bubblebot.irc-cmd :as cmd]))
+  (:require [clojure.string :refer [split trim]]
+            [bubblebot.irc-cmd :as cmd]))
 
 (def server {:host "irc.freenode.net"
              :port 6667
@@ -28,18 +29,25 @@
     (.println (str msg "\r"))
     (.flush)))
 
+(def RE-LINE #"^(\:\S+.*?|)([^\: ]\S+.*?|)([^\: ]\S+.*?|)(\:\S+.*?|)$")
+
+(defn parse-line
+  "Parses raw IRC input to a map."
+  [line]
+  (let [drop-semicolon (fn [s] (if (.startsWith (str s) ":") (drop 1 s) s))
+        trimmed-line (for [g (drop 1 (re-find RE-LINE line))] (trim g))
+        cleaned-line (map #(apply str (drop-semicolon %)) trimmed-line)]
+    (assoc (zipmap [:prefix :cmd :params :msg] cleaned-line) :raw line)))
+
 (defn conn-handler [conn]
   (while (nil? (:exit @conn))
-    (let [msg (.readLine (:in @conn))]
-      (println (str "> " msg))
-      (let [[_ from priv chan cmd] (re-find #":(.*)!~.* (PRIVMSG) (.*) :(.*)" msg)]
-        (if (not (nil? cmd))
-          (writer conn (cmd/msg chan cmd))))
+    (let [line (parse-line (.readLine (:in @conn)))]
+      (println (:raw line))
       (cond 
-       (re-find #"^ERROR :Closing Link:" msg)
+       (re-find #"^ERROR :Closing Link:" (:raw line))
         (dosync (alter conn merge {:exit true}))
-       (re-find #"^PING" msg)
-        (writer conn (cmd/pong (re-find #":.*" msg)))))))
+       (= (:cmd line) "PING")
+        (writer conn (cmd/pong (:raw line)))))))
 
 (defn login
   "Login and perform initial commands."

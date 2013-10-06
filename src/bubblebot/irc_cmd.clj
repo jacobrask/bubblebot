@@ -6,24 +6,32 @@
 (defn nick [n] (str "NICK " n))
 
 (defn user
-  "The USER command is used at the beginning of connection to specify
-   the username, hostname and realname of a new user."
+  "Used at the beginning of connection to specify the username,
+   hostname and realname of a new user."
   [user realname]
-  (str "USER " user " 0 * \"" realname "\""))
+  (str "USER " user " 0 * :" realname))
 
 (defn join
-  ([chan] (str "JOIN " chan))
-  ([chan key] (str "JOIN " chan " " key)))
+  "Join a given channel, with an optional key."
+  ([c] (str "JOIN " c))
+  ([c k] (str "JOIN " c " " k)))
 
 (defn msg
   "Send a message to a user or a channel."
   [target msg]
   (str "PRIVMSG " target " :" msg))
 
-(defn part [chan] (str "PART " chan))
+(defn part
+  "Part a given channel."
+  [chan]
+  (str "PART " chan))
 
-(defn pong [server] (str "PONG " server))
+(defn pong
+  "Takes a PONG line and returns the PING reply."
+  [ping]
+  (.replace ping "PING" "PONG"))
 
 (defn quit
+  "Quit the IRC server, with an optional quit message."
   ([] "QUIT")
   ([msg] (str "QUIT :" msg)))
