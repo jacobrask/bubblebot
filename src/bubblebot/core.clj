@@ -1,7 +1,7 @@
 (ns bubblebot.core
   (:import (java.net Socket)
            (java.io PrintWriter InputStreamReader BufferedReader))
-  (:require [bubblebot.irc-cmd :as irc]))
+  (:require [bubblebot.irc-cmd :as cmd]))
 
 (def server {:host "irc.freenode.net"
              :port 6667
@@ -34,20 +34,19 @@
       (println (str "> " msg))
       (let [[_ from priv chan cmd] (re-find #":(.*)!~.* (PRIVMSG) (.*) :(.*)" msg)]
         (if (not (nil? cmd))
-          (writer conn (irc/msg chan cmd))))
+          (writer conn (cmd/msg chan cmd))))
       (cond 
        (re-find #"^ERROR :Closing Link:" msg)
         (dosync (alter conn merge {:exit true}))
        (re-find #"^PING" msg)
-        (writer conn (irc/pong (re-find #":.*" msg)))))))
+        (writer conn (cmd/pong (re-find #":.*" msg)))))))
 
 (defn login
   "Login and perform initial commands."
   [conn user]
-  (writer conn (irc/nick (:nick user)))
-  (writer conn (irc/user (:nick user) (:name user)))
-  (doseq [chan (:channels server)] (writer conn (irc/join chan))))
+  (writer conn (cmd/nick (:nick user)))
+  (writer conn (cmd/user (:nick user) (:name user)))
+  (doseq [chan (:channels server)] (writer conn (cmd/join chan))))
 
 (defn -main [& args]
-  (def irc (connect server))
-  (login irc user))
+  (login (connect server) user))
