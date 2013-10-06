@@ -4,6 +4,7 @@
   (:require [clojure.string :refer [split trim]]
             [bubblebot.irc-cmd :as cmd]))
 
+; TODO: Read from config
 (def server {:host "irc.freenode.net"
              :port 6667
              :channels ["###bubbletest"]})
@@ -29,8 +30,8 @@
         (.println (str msg "\r"))
         (.flush))))
 
+; TODO: Split out parser to a separate namespace, and make it more comprehensible.
 (def RE-LINE #"^(\:\S+.*?|)([^\: ]\S+.*?|)([^\: ]\S+.*?|)(\:\S+.*?|)$")
-
 (defn parse-line
   "Parses raw IRC input to a map."
   [line]
@@ -39,8 +40,10 @@
         cleaned-line (map #(apply str (drop-semicolon %)) trimmed-line)]
     (assoc (zipmap [:prefix :cmd :params :msg] cleaned-line) :raw line)))
 
+; Should this function take a list of callbacks?
 (defn conn-handler [conn]
   (let [write (writer conn)]
+    ; XXX: Basically while (true) and a break statement. Looks ugly.
     (while (nil? (:exit @conn))
       (let [line (parse-line (.readLine (:in @conn)))]
         (println (:raw line))
@@ -59,4 +62,9 @@
     (doseq [chan (:channels server)] (write (cmd/join chan)))))
 
 (defn -main [& args]
-  (login (connect server) user))
+  ; connect could take an additional list of callbacks.
+  ; The callbacks comes from loading a number of "plugins"/features.
+  ; That way a single instance can run multiple bots, using different settings
+  ; and plugins.
+  (let [conn (connect server)]
+    (login conn user)))
