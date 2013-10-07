@@ -2,7 +2,8 @@
   (:import (java.net Socket)
            (java.io PrintWriter InputStreamReader BufferedReader))
   (:require [clojure.string :refer [split trim]]
-            [bubblebot.irc-cmd :as cmd]))
+            [bubblebot.irc-cmd :as cmd]
+            [bubblebot.urler]))
 
 
 ; TODO: Split out parser to a separate namespace, and make it more comprehensible.
@@ -35,14 +36,15 @@
         (.println (str msg "\r"))
         (.flush))))
 
-; Should take a list of callbacks, applying to different commands.
-(defn conn-handler [conn]
+(defn conn-handler
+  [conn listeners]
   "Listen to .readLine from `conn`"
   (let [write (writer conn)]
     ; XXX: Basically while (true) and a break statement. Looks ugly?
     (while (nil? (:exit @conn))
       (let [line (parse-line (.readLine (:in @conn)))]
         (println (:raw line))
+        (listeners line conn)
         (cond
          (re-find #"^ERROR :Closing Link:" (:raw line))
           (dosync (alter conn merge {:exit true}))
@@ -63,7 +65,8 @@
                 :port 6667
                 :channels ["###bubbletest"]}
         user   {:name "Too Much Bubble" :nick "bubbel-test"}
-        conn   (connect server)]
+        conn   (connect server)
+        handler #(conn-handler conn bubblebot.urler/listen)]
     ; Start parsing IRC connection outstream in new thread
-    (.start (Thread. #(conn-handler conn)))
+    (.start (Thread. handler))
     (login conn user server)))
