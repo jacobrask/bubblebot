@@ -1,10 +1,9 @@
 (ns bubblebot.core
-  (:import (java.net Socket)
-           (java.io PrintWriter InputStreamReader BufferedReader))
+  (:import (java.net Socket))
   (:require [clojure.string :refer [split trim]]
+            [clojure.java.io :as io]
             [bubblebot.irc-cmd :as cmd]
             [bubblebot.urler]))
-
 
 ; TODO: Split out parser to a separate namespace, and make it more comprehensible.
 (def RE-LINE #"^(\:\S+.*?|)([^\: ]\S+.*?|)([^\: ]\S+.*?|)(\:\S+.*?|)$")
@@ -16,25 +15,24 @@
         cleaned-line   (map #(apply str (drop-semicolon %)) trimmed-line)]
     (assoc (zipmap [:prefix :cmd :params :msg] cleaned-line) :raw line)))
 
-(declare conn-handler)
-
-(defn connect
-  "Given a `host`/`port` map, create an IRC socket, returning a map with
-  `in`/`out` streams."
-  [server]
-  (let [socket (Socket. (:host server) (:port server))
-        in     (BufferedReader. (InputStreamReader. (.getInputStream socket)))
-        out    (PrintWriter. (.getOutputStream socket))
-        conn   (ref {:in in :out out})]
-    conn))
-
 (defn writer
-  "Return a write function to write a raw message to given connection `conn`."
+  "Return a function to write a raw message to given connection."
   [conn]
-    (fn [msg]
-      (doto (:out @conn)
-        (.println (str msg "\r"))
-        (.flush))))
+    (fn [msg] (binding [*out* (:out @conn)] (println msg))))
+
+(defn create-connection
+  "Create an IRC socket and return a map with reader and writer."
+  [server]
+  (let [socket (Socket. (:host server) (:port server))]
+    (ref {:in (io/reader socket) :out (io/writer socket)})))
+
+(defn register-user
+  "Login and perform initial commands."
+  [conn user server]
+  (let [write (writer conn)]
+    (write (cmd/nick (:nick user)))
+    (write (cmd/user (:nick user) (:name user)))
+    (doseq [chan (:channels server)] (write (cmd/join chan)))))
 
 (defn conn-handler
   [conn listeners]
@@ -43,30 +41,21 @@
     ; XXX: Basically while (true) and a break statement. Looks ugly?
     (while (nil? (:exit @conn))
       (let [line (parse-line (.readLine (:in @conn)))]
-        (println (:raw line))
+        (println (:cmd line) (:msg line))
         (listeners line conn)
         (cond
-         (re-find #"^ERROR :Closing Link:" (:raw line))
+         (= (:cmd line) "ERROR")
           (dosync (alter conn merge {:exit true}))
          (= (:cmd line) "PING")
           (write (cmd/pong (:raw line))))))))
 
-(defn login
-  "Login and perform initial commands."
-  [conn user server]
-  (let [write (writer conn)]
-    (write (cmd/nick (:nick user)))
-    (write (cmd/user (:nick user) (:name user)))
-    (doseq [chan (:channels server)] (write (cmd/join chan)))))
-
 (defn -main [& args]
   ; TODO: Read from config/args
-  (let [server {:host "irc.freenode.net"
-                :port 6667
+  (let [server {:host "irc.freenode.net" :port 6667
                 :channels ["###bubbletest"]}
         user   {:name "Too Much Bubble" :nick "bubbel-test"}
-        conn   (connect server)
+        conn   (create-connection server)
         handler #(conn-handler conn bubblebot.urler/listen)]
     ; Start parsing IRC connection outstream in new thread
     (.start (Thread. handler))
-    (login conn user server)))
+    (register-user conn user server)))
