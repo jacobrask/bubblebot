@@ -18,7 +18,7 @@
 (defn writer
   "Return a function to write a raw message to given connection."
   [conn]
-    (fn [msg] (binding [*out* (:out @conn)] (println msg))))
+  (fn [msg] (binding [*out* (:out @conn)] (println msg))))
 
 (defn create-connection
   "Create an IRC socket and return a map with reader and writer."
@@ -36,18 +36,15 @@
 
 (defn conn-handler
   [conn listeners]
-  "Listen to .readLine from `conn`"
+  "Handle incoming lines."
   (let [write (writer conn)]
-    ; XXX: Basically while (true) and a break statement. Looks ugly?
-    (while (nil? (:exit @conn))
-      (let [line (parse-line (.readLine (:in @conn)))]
-        (println (:cmd line) (:msg line))
-        (listeners line conn)
-        (cond
-         (= (:cmd line) "ERROR")
-          (dosync (alter conn merge {:exit true}))
-         (= (:cmd line) "PING")
-          (write (cmd/pong (:raw line))))))))
+    (doseq [line (line-seq (:in @conn))
+            :let [line (parse-line line)]]
+      (println (:raw line))
+      (listeners line conn)
+      (cond
+        (= (:cmd line) "PING")
+         (write (cmd/pong (:raw line)))))))
 
 (defn -main [& args]
   ; TODO: Read from config/args
@@ -56,6 +53,5 @@
         user   {:name "Too Much Bubble" :nick "bubbel-test"}
         conn   (create-connection server)
         handler #(conn-handler conn bubblebot.urler/listen)]
-    ; Start parsing IRC connection outstream in new thread
     (.start (Thread. handler))
     (register-user conn user server)))
