@@ -3,7 +3,7 @@
   (:require [clojure.string :refer [split trim]]
             [clojure.java.io :as io]
             [bubblebot.irc-cmd :as cmd]
-            [bubblebot.urler]))
+            [bubblebot.urler :as urler]))
 
 ; TODO: Split out parser to a separate namespace, and make it more comprehensible.
 (def RE-LINE #"^(\:\S+.*?|)([^\: ]\S+.*?|)([^\: ]\S+.*?|)(\:\S+.*?|)$")
@@ -63,4 +63,4 @@
   (let [server {:host "irc.freenode.net" :port 6667
                 :channels ["###bubbletest"]}
         user {:name "Too Much Bubble" :nick "bubbel-test"}]
-    (connect server user [ cb-ping-pong cb-println ])))
+    (connect server user [ cb-ping-pong cb-println urler/listen ])))
