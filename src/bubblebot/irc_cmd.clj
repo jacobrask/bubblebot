@@ -8,8 +8,7 @@
 (defn user
   "Used at the beginning of a connection to specify the username,
   mode and realname of a new user."
-  [user realname]
-  (str "USER " user " 0 * :" realname))
+  [u rn] (str "USER " u " 0 * :" rn))
 
 (defn join
   "Join a given channel, with an optional key."
@@ -18,20 +17,24 @@
 
 (defn msg
   "Send a message to a user or a channel."
-  [target msg]
-  (str "PRIVMSG " target " :" msg))
+  [t m] (str "PRIVMSG " t " :" m))
 
 (defn part
   "Part a given channel."
-  [chan]
-  (str "PART " chan))
+  [c] (str "PART " c))
 
 (defn pong
   "Takes a PONG line and returns the PING reply."
-  [ping]
-  (.replace ping "PING" "PONG"))
+  [p] (.replace p "PING" "PONG"))
 
 (defn quit
   "Quit the IRC server, with an optional quit message."
   ([] "QUIT")
-  ([msg] (str "QUIT :" msg)))
+  ([m] (str "QUIT :" m)))
+
+(defn register-user
+  "Commands sent to IRC server on first connection."
+  [u channels]
+  [(nick (:nick u))
+   (user (:nick u) (:name u))
+   (map join channels)])
