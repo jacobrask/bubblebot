@@ -1,5 +1,5 @@
 (ns bubblebot.urler
-  (:require [clojure.string :refer [trim]]
+  (:require [clojure.string :refer [trim blank?]]
             [clj-http.client :as http-client]
             [net.cgrand.enlive-html :as html]
             [bubblebot.irc-cmd :as cmd]))
@@ -36,7 +36,7 @@
 (defn listen
   [line]
   (if (= (:cmd line) "PRIVMSG")
-    (when-let [url (find-url (:msg line))
-               title (title-from-url url)]
-      (when (not (blank title))
-        (cmd/msg (:params line) (str (bold title) " (" (short-url url) ")"))))))
+    (when-let [url (find-url (:msg line))]
+      (when-let [title (title-from-url url)]
+        (when (not (blank? title))
+          (cmd/msg (:params line) (str (bold title) " (" (short-url url) ")")))))))

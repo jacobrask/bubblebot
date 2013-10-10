@@ -61,6 +61,6 @@
 (defn -main [& args]
   ; TODO: Read from config/args
   (let [server {:host "irc.freenode.net" :port 6667
-                :channels ["###bubbletest"]}
-        user {:name "Too Much Bubble" :nick "bubbel-test"}]
+                :channels ["###555" "###bubbletest"]}
+        user {:name "Too Much Bubble" :nick "bubbel"}]
     (connect server user [ cb-ping-pong cb-println urler/listen ])))
