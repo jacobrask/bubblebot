@@ -39,7 +39,7 @@ QuoteDB.prototype.getLast = function (cb) {
 QuoteDB.prototype.add = function (text, adder, cb) {
   this.db.view('quote/text_from_num', { limit: 1, descending: true }, function (err, doc) {
     if (err != null) return cb(err);
-    var last = doc.rows[0].key;
+    var last = doc.rows.length > 0 ? doc.rows[0].key : 0;
     var quote = {
       text: text.trim(),
       adder: adder,
