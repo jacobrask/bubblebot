@@ -29,7 +29,7 @@
   [url]
   (if (> (count url) 25)
     (:body (http-client/get (str "http://tinyurl.com/api-create.php?url=" url)))
-    (url)))
+    url))
 
 (defn listen
   [line]
