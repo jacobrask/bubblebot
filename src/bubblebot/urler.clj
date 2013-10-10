@@ -4,19 +4,36 @@
             [net.cgrand.enlive-html :as html]
             [bubblebot.irc-cmd :as cmd]))
 
+(defn fetch-url-content
+  [url]
+  (:body (http-client/get url {:headers {"Accept-Language" "sv,en,en-us"}
+                               :ignore-unknown-host? true
+                               :throw-exceptions false})))
+
 (defn find-title
-  [h]
-  (trim (html/text (first (html/select h [:title])))))
+  [rdr]
+  (trim (html/text (first (html/select rdr [:title])))))
 
 (defn find-url
-  [str]
-  (re-find #"https?:\/\/\S+" str))
+  [s]
+  (re-find #"https?:\/\/\S+" s))
+
+(defn title-from-url
+  [url]
+  (when-let [body (fetch-url-content url)]
+    (find-title (html/html-resource (java.io.StringReader. body)))))
+
+(defn bold [s] (str "\u0002" s "\u0002"))
+
+(defn short-url
+  [url]
+  (if (> (count url) 25)
+    (:body (http-client/get (str "http://tinyurl.com/api-create.php?url=" url)))
+    (url)))
 
 (defn listen
-  "Given a parsed IRC line and a write function"
   [line]
   (if (= (:cmd line) "PRIVMSG")
     (when-let [url (find-url (:msg line))]
-      (let [rdr (java.io.StringReader. (:body (http-client/get url)))]
-        (when-let [title (find-title (html/html-resource rdr))]
-          (cmd/msg (:params line) (str "\u0002" title "\u0002 (" url ")")))))))
+      (when-let [title (title-from-url url)]
+        (cmd/msg (:params line) (str (bold title) " (" (short-url url) ")"))))))
