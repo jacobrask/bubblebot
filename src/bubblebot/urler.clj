@@ -28,12 +28,15 @@
 (defn short-url
   [url]
   (if (> (count url) 25)
-    (:body (http-client/get (str "http://tinyurl.com/api-create.php?url=" url)))
+    (try
+      (:body (http-client/get (str "http://tinyurl.com/api-create.php?url=" url)))
+      (catch Exception _ url))
     url))
 
 (defn listen
   [line]
   (if (= (:cmd line) "PRIVMSG")
-    (when-let [url (find-url (:msg line))]
-      (when-let [title (title-from-url url)]
+    (when-let [url (find-url (:msg line))
+               title (title-from-url url)]
+      (when (not (blank title))
         (cmd/msg (:params line) (str (bold title) " (" (short-url url) ")"))))))
