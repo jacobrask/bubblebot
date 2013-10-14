@@ -3,17 +3,8 @@
   (:require [clojure.string :refer [split trim]]
             [clojure.java.io :as io]
             [bubblebot.irc-cmd :as cmd]
+            [bubblebot.line-parser :as parser]
             [bubblebot.urler :as urler]))
-
-; TODO: Split out parser to a separate namespace, and make it more comprehensible.
-(def RE-LINE #"^(\:\S+.*?|)([^\: ]\S+.*?|)([^\: ]\S+.*?|)(\:\S+.*?|)$")
-(defn parse-line
-  "Given raw IRC input, returns a parsed map."
-  [line]
-  (let [drop-semicolon (fn [s] (if (.startsWith (str s) ":") (drop 1 s) s))
-        trimmed-line   (for [g (drop 1 (re-find RE-LINE line))] (trim g))
-        cleaned-line   (map #(apply str (drop-semicolon %)) trimmed-line)]
-    (assoc (zipmap [:prefix :cmd :params :msg] cleaned-line) :raw line)))
 
 (defn writer
   "Return a function to write a raw message to given connection `conn`.
@@ -33,12 +24,12 @@
 
 (defn apply-cbs
   [lines cbs]
-  (doseq [line (map parse-line lines)]
+  (doseq [line (map parser/parse lines)]
     (doseq [cb cbs] (cb line))))
 
 (defn cb-ping-pong
   [line]
-  (when (= (:cmd line) "PING") (cmd/pong (:raw line))))
+  (when (= (:command line) "PING") (cmd/pong (:raw line))))
 
 (defn cb-println
   [line]
@@ -51,16 +42,21 @@
   (fn [cb] (fn [line] (if-let [l (cb line)] (write l)))))
 
 (defn connect
-  [server user cbs]
+  [server user channels cbs]
   (let [conn (create-connection server)
         write (writer conn)
         cbs (map (make-cb-wrapper write) cbs)]
     (.start (Thread. #(apply-cbs (line-seq (:in @conn)) cbs)))
-    (write (cmd/register-user user (:channels server)))))
+    (write (cmd/register-user user channels))
+    conn))
 
-(defn -main [& args]
-  ; TODO: Read from config/args
-  (let [server {:host "irc.freenode.net" :port 6667
-                :channels ["###555" "###bubbletest"]}
-        user {:name "Too Much Bubble" :nick "bubbel"}]
-    (connect server user [ cb-ping-pong cb-println urler/listen ])))
+(defn disconnect
+  [conn]
+  ((writer conn) (cmd/quit)))
+
+(defn -main
+  ([] (-main "config.clj"))
+  ([conf-file]
+   (let [cfg (read-string (slurp conf-file))]
+     (connect (:server cfg) (:user cfg) (:channels cfg)
+              [ cb-ping-pong cb-println urler/listen ]))))

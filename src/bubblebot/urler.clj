@@ -1,18 +1,30 @@
 (ns bubblebot.urler
-  (:require [clojure.string :refer [trim blank?]]
+  (:require [clojure.string :as string]
+            [com.ashafa.clutch :as couch]
             [clj-http.client :as http-client]
             [net.cgrand.enlive-html :as html]
             [bubblebot.irc-cmd :as cmd]))
 
+(defn save-url
+  "Save URL in database."
+  [data]
+  (let [db (:couch-url (:urler (read-string (slurp "config.clj"))))]
+    (println (couch/put-document db data))))
+
 (defn fetch-url-content
+  "Get the HTML content from an URL as a string"
   [url]
   (:body (http-client/get url {:headers {"Accept-Language" "sv,en,en-us"}
                                :ignore-unknown-host? true
                                :throw-exceptions false})))
 
 (defn find-title
+  "Given a StringReader with HTML content, return the contents of the <title>
+  element with normalized whitespace"
   [rdr]
-  (trim (html/text (first (html/select rdr [:title])))))
+  (string/trim
+    (string/replace
+      (html/text (first (html/select rdr [:title]))) #"\s+" " ")))
 
 (defn find-url
   [s]
@@ -35,8 +47,16 @@
 
 (defn listen
   [line]
-  (if (= (:cmd line) "PRIVMSG")
-    (when-let [url (find-url (:msg line))]
-      (when-let [title (title-from-url url)]
-        (when (not (blank? title))
-          (cmd/msg (:params line) (str (bold title) " (" (short-url url) ")")))))))
+  (if (= (:command line) "PRIVMSG")
+    (let [chan (first (:params line))
+          text (fnext (:params line))]
+      (when-let [url (find-url text)]
+        (when-let [title (title-from-url url)]
+          (when (not (string/blank? title))
+            (save-url {:channel chan
+                       :url url
+                       :title title
+                       :text text
+                       :nick (:nick line)
+                       :date (System/currentTimeMillis)})
+            (cmd/msg chan (str (bold title) " (" (short-url url) ")"))))))))

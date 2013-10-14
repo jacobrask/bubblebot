@@ -34,7 +34,10 @@
 
 (defn register-user
   "Commands sent to IRC server on first connection."
-  [u channels]
-  [(nick (:nick u))
-   (user (:nick u) (:name u))
-   (map join channels)])
+  ([u]
+   [(nick (:nick u))
+    (user (:nick u) (:name u))])
+  ([u chans]
+   [(nick (:nick u))
+    (user (:nick u) (:name u))
+    (map join chans)]))
