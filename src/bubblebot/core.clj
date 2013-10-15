@@ -10,10 +10,10 @@
   [conn]
   (fn write [msg]
     (when (not (empty? msg))
-      (if (coll? msg)
-        (doseq [m msg] (write m))
-        (do (println (str "-> " msg))
-            (binding [*out* (:out @conn)] (println msg)))))))
+      (cond
+        (coll? msg) (doseq [m msg] (write m))
+        (string? msg) (do (println (str "-> " msg))
+                          (binding [*out* (:out @conn)] (println msg)))))))
 
 (defn- create-connection
   "Create an IRC socket and return a map with reader and writer"
@@ -54,6 +54,7 @@
   ([] (-main "config.clj"))
   ([conf-file]
    (let [cfg (read-string (slurp conf-file))
+         default-handlers [ cb-ping-pong ]
          plugins (require-plugins (:plugins cfg))]
      (connect (:server cfg) (:user cfg) (:channels cfg)
-              (conj plugins cb-ping-pong)))))
+              (concat default-handlers plugins)))))

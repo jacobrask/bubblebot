@@ -1,3 +1,5 @@
+;; Copyright (c) 2011 irclj authors <https://github.com/flatland/irclj>
+;;
 ;; This is a lightweight parser that takes an IRC message and generates
 ;; a Clojure map of information from that message. One piece of terminology
 ;; to keep in mind is 'line sequence'. In this context, it means the IRC

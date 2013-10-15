@@ -1,7 +1,6 @@
-; Builds IRC message strings according to the
-; IRC Client Protocol <http://tools.ietf.org/html/rfc2812>
-
-(ns bubblebot.irc-cmd)
+(ns bubblebot.irc-cmd
+  "Builds IRC message strings according to the
+  IRC Client Protocol <http://tools.ietf.org/html/rfc2812>")
 
 (defn nick [n] (str "NICK " n))
 
