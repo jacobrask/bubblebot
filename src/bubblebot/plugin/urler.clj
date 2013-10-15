@@ -14,9 +14,11 @@
 (defn- fetch-url-content
   "Get the HTML content from an URL as a string"
   [url]
-  (:body (http-client/get url {:headers {"Accept-Language" "sv,en,en-us"}
-                               :ignore-unknown-host? true
-                               :throw-exceptions false})))
+  (try
+    (:body (http-client/get url {:headers {"Accept-Language" "sv,en,en-us"}
+                                 :ignore-unknown-host? true}))
+    (catch Exception e (string/join "Couldn't GET" url ":" (.getMessage e)))))
+
 
 (defn- normalize-whitespace [s]
   (string/trim (string/replace s #"\s+" " ")))
@@ -29,7 +31,7 @@
 
 (defn- find-url
   [s]
-  (re-find #"https?:\/\/\S+" s))
+  (re-find #"https?:\/\/[a-zA-Z0-9\-\._\?,\/\\\+%\$#=~]+" s))
 
 (defn- title-from-url
   [url]
@@ -43,7 +45,7 @@
   (if (> (count url) 25)
     (try
       (:body (http-client/get (str "http://tinyurl.com/api-create.php?url=" url)))
-      (catch Exception _ url))
+      (catch Exception e (string/join "Couldn't shorten" url ":" (.getMessage e))))
     url))
 
 (defn message-handler
