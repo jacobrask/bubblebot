@@ -3,7 +3,7 @@
 ;; to keep in mind is 'line sequence'. In this context, it means the IRC
 ;; message broken up at spaces.
 (ns bubblebot.line-parser
-  "IRC messages -> Clojure maps."
+  "IRC messages -> Clojure maps"
   (:require [clojure.string :as string]))
 
 ;; Prefixes are optional, so this might return nil. We'll use the
@@ -50,14 +50,14 @@
 
 (defn parse
   "Takes a raw message from IRC and turns it into a Clojure map.
-   This map will contain :command, :params, :raw keys. If the message
+   This map will contain :cmd, :params, :raw keys. If the message
    begins with a prefix, it will be parsed and :nick, :user, and :host
    keys will also be in the resulting map."
   [line]
   (let [line-s (string/split line #" ")
         prefix (parse-prefix line-s)]
     (into
-     {:command (if prefix (second line-s) (first line-s))
+     {:cmd (if prefix (second line-s) (first line-s))
       :params (parse-params line-s prefix)
       :raw line}
      prefix)))

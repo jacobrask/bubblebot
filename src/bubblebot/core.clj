@@ -1,62 +1,59 @@
 (ns bubblebot.core
   (:import (java.net Socket))
-  (:require [clojure.string :refer [split trim]]
-            [clojure.java.io :as io]
+  (:require [clojure.java.io :as io]
             [bubblebot.irc-cmd :as cmd]
-            [bubblebot.line-parser :as parser]
-            [bubblebot.urler :as urler]))
+            [bubblebot.line-parser :refer [parse]]))
 
-(defn writer
-  "Return a function to write a raw message to given connection `conn`.
-  The returned function takes either a message or a collection of messages."
+(defn- writer
+  "Return a function to write a raw message (or a collection of messages)
+  to given connection `conn`"
   [conn]
   (fn write [msg]
-    (if (coll? msg)
-      (doseq [m msg] (write m))
-      (do (println (str "-> " msg))
-          (binding [*out* (:out @conn)] (println msg))))))
+    (when (not (empty? msg))
+      (if (coll? msg)
+        (doseq [m msg] (write m))
+        (do (println (str "-> " msg))
+            (binding [*out* (:out @conn)] (println msg)))))))
 
-(defn create-connection
-  "Create an IRC socket and return a map with reader and writer."
+(defn- create-connection
+  "Create an IRC socket and return a map with reader and writer"
   [server]
   (let [socket (Socket. (:host server) (:port server))]
     (ref {:in (io/reader socket) :out (io/writer socket)})))
 
-(defn apply-cbs
-  [lines cbs]
-  (doseq [line (map parser/parse lines)]
-    (doseq [cb cbs] (cb line))))
+(defn- dodoseq
+  "For each x, do all functions"
+  [xs fs]
+  (doseq [x xs] (doseq [f fs] (f x))))
 
-(defn cb-ping-pong
-  [line]
-  (when (= (:command line) "PING") (cmd/pong (:raw line))))
-
-(defn cb-println
-  [line]
-  (println (str "<- " (:raw line))))
-
-(defn make-cb-wrapper
-  "Return a function to wrap callbacks. The callback will be run in a
-  new thread, and the return value will be passed to `write`."
-  [write]
-  (fn [cb] (fn [line] (if-let [l (cb line)] (write l)))))
+(defn- cb-ping-pong [line]
+  (when (= (:cmd line) "PING") (cmd/pong (:raw line))))
 
 (defn connect
-  [server user channels cbs]
+  "Connect to server and register plugin handlers"
+  [server user channels handlers]
   (let [conn (create-connection server)
         write (writer conn)
-        cbs (map (make-cb-wrapper write) cbs)]
-    (.start (Thread. #(apply-cbs (line-seq (:in @conn)) cbs)))
+        fns (map #(comp write %) handlers)
+        lines (map parse (line-seq (:in @conn)))]
+    (.start (Thread. #(dodoseq lines fns)))
     (write (cmd/register-user user channels))
     conn))
 
-(defn disconnect
-  [conn]
+(defn disconnect [conn]
   ((writer conn) (cmd/quit)))
+
+(defn require-plugins
+  "Require plugins and return their message-handler functions"
+  [plugins]
+  (let [ps (map :ns (vals plugins))]
+    (doseq [p ps] (require (symbol p)))
+    (map (comp resolve symbol #(str % "/message-handler")) ps)))
 
 (defn -main
   ([] (-main "config.clj"))
   ([conf-file]
-   (let [cfg (read-string (slurp conf-file))]
+   (let [cfg (read-string (slurp conf-file))
+         plugins (require-plugins (:plugins cfg))]
      (connect (:server cfg) (:user cfg) (:channels cfg)
-              [ cb-ping-pong cb-println urler/listen ]))))
+              (conj plugins cb-ping-pong)))))

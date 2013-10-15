@@ -1,43 +1,44 @@
-(ns bubblebot.urler
+(ns bubblebot.plugin.urler
   (:require [clojure.string :as string]
             [com.ashafa.clutch :as couch]
             [clj-http.client :as http-client]
             [net.cgrand.enlive-html :as html]
             [bubblebot.irc-cmd :as cmd]))
 
-(defn save-url
-  "Save URL in database."
+(defn- save-url
+  "Save URL in database"
   [data]
-  (let [db (:couch-url (:urler (read-string (slurp "config.clj"))))]
-    (println (couch/put-document db data))))
+  (when-let [db (:couch-url (:urler (:plugins (read-string (slurp "config.clj")))))]
+    (couch/put-document db data)))
 
-(defn fetch-url-content
+(defn- fetch-url-content
   "Get the HTML content from an URL as a string"
   [url]
   (:body (http-client/get url {:headers {"Accept-Language" "sv,en,en-us"}
                                :ignore-unknown-host? true
                                :throw-exceptions false})))
 
-(defn find-title
+(defn- normalize-whitespace [s]
+  (string/trim (string/replace s #"\s+" " ")))
+
+(defn- find-title
   "Given a StringReader with HTML content, return the contents of the <title>
   element with normalized whitespace"
   [rdr]
-  (string/trim
-    (string/replace
-      (html/text (first (html/select rdr [:title]))) #"\s+" " ")))
+  (normalize-whitespace (html/text (first (html/select rdr [:title])))))
 
-(defn find-url
+(defn- find-url
   [s]
   (re-find #"https?:\/\/\S+" s))
 
-(defn title-from-url
+(defn- title-from-url
   [url]
   (when-let [body (fetch-url-content url)]
     (find-title (html/html-resource (java.io.StringReader. body)))))
 
-(defn bold [s] (str "\u0002" s "\u0002"))
+(defn- bold [s] (str "\u0002" s "\u0002"))
 
-(defn short-url
+(defn- short-url
   [url]
   (if (> (count url) 25)
     (try
@@ -45,9 +46,9 @@
       (catch Exception _ url))
     url))
 
-(defn listen
+(defn message-handler
   [line]
-  (if (= (:command line) "PRIVMSG")
+  (when (= (:cmd line) "PRIVMSG")
     (let [chan (first (:params line))
           text (fnext (:params line))]
       (when-let [url (find-url text)]
