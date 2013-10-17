@@ -40,3 +40,5 @@
    [(nick (:nick u))
     (user (:nick u) (:name u))
     (map join chans)]))
+
+(defn bold [s] (str "\u0002" s "\u0002"))

@@ -2,23 +2,22 @@
   (:import (java.net Socket))
   (:require [clojure.java.io :as io]
             [bubblebot.irc-cmd :as cmd]
-            [bubblebot.line-parser :refer [parse]]))
+            [bubblebot.msg-parser :refer [parse]]))
 
 (defn- writer
   "Return a function to write a raw message (or a collection of messages)
   to given connection `conn`"
   [conn]
   (fn write [msg]
-    (when (not (empty? msg))
-      (cond
-        (coll? msg) (doseq [m msg] (write m))
-        (string? msg) (do (println (str "-> " msg))
-                          (binding [*out* (:out @conn)] (println msg)))))))
+    (when-not (empty? msg)
+      (cond (coll? msg) (doseq [m msg] (write m))
+            (string? msg) (do (println (str "-> " msg))
+                              (binding [*out* (:out @conn)] (println msg)))))))
 
 (defn- create-connection
   "Create an IRC socket and return a map with reader and writer"
-  [server]
-  (let [socket (Socket. (:host server) (:port server))]
+  [{:keys [host port]}]
+  (let [socket (Socket. host port)]
     (ref {:in (io/reader socket) :out (io/writer socket)})))
 
 (defn- dodoseq
@@ -26,8 +25,8 @@
   [xs fs]
   (doseq [x xs] (doseq [f fs] (f x))))
 
-(defn- cb-ping-pong [line]
-  (when (= (:cmd line) "PING") (cmd/pong (:raw line))))
+(defn- cb-ping-pong [{:keys [cmd raw]}]
+  (when (= cmd "PING") (cmd/pong raw)))
 
 (defn connect
   "Connect to server and register plugin handlers"
@@ -53,8 +52,7 @@
 (defn -main
   ([] (-main "config.clj"))
   ([conf-file]
-   (let [cfg (read-string (slurp conf-file))
+   (let [{:keys [server user channels plugins]} (read-string (slurp conf-file))
          default-handlers [ cb-ping-pong ]
-         plugins (require-plugins (:plugins cfg))]
-     (connect (:server cfg) (:user cfg) (:channels cfg)
-              (concat default-handlers plugins)))))
+         handlers (concat default-handlers (require-plugins plugins))]
+     (connect server user channels handlers))))
