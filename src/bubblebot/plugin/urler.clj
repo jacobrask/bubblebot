@@ -10,16 +10,18 @@
 (defn- save-url
   "Save URL in database"
   [data]
-  (when-let [db (-> (read-string (slurp "config.clj") :plugins :urler :couch-url))]
+  (when-let [db (-> "config.clj" slurp read-string :plugins :urler :couch-url)]
     (couch/put-document db data)))
 
 (defn- fetch-url-content
   "Get the HTML content from an URL as a string"
   [url]
   (try
-    (:body (http/get url {:headers {"Accept-Language" "sv,en,en-us"}
-                          :ignore-unknown-host? true}))
-    (catch Exception e (str/join "Couldn't GET" url ":" (.getMessage e)))))
+    (let [{:keys [status body headers]}
+           (http/get url {:headers {"Accept-Language" "sv,en,en-us"}
+                          :ignore-unknown-host? true})]
+      (when (re-find #"^text\/html" (get headers "content-type")) body))
+    (catch Exception e (str "Couldn't GET " url ": " (.getMessage e)))))
 
 (defn- normalize-whitespace [s]
   (str/trim (str/replace s #"\s+" " ")))
@@ -44,16 +46,16 @@
   (if (> (count url) 25)
     (try
       (:body (http/get (str "http://tinyurl.com/api-create.php?url=" url)))
-      (catch Exception e (str/join "Couldn't shorten" url ":" (.getMessage e))))
+      (catch Exception e (str "Couldn't shorten " url ": " (.getMessage e))))
     url))
 
 (defn message-handler
   [{[chan text] :params :keys [cmd nick]}]
   (when (= cmd "PRIVMSG")
     (when-let [url (find-url text)]
-      (when-let [title (title-from-url url)]
+      (let [title (title-from-url url)]
+        (save-url {:channel chan :url url
+                   :title title  :text text
+                   :nick nick    :date (System/currentTimeMillis)})
         (when-not (str/blank? title)
-          (save-url {:channel chan :url url
-                     :title title  :text text
-                     :nick nick    :date (System/currentTimeMillis)})
           (cmd/msg chan (str (cmd/bold title) " ("(short-url url)")")))))))
