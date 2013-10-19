@@ -1,7 +1,7 @@
 (ns bubblebot.core
   (:import (java.net Socket))
   (:require [clojure.java.io :as io]
-            [bubblebot.irc-cmd :as cmd]
+            [bubblebot.msg-builder :as cmd]
             [bubblebot.msg-parser :refer [parse]]))
 
 (defn- writer
@@ -53,6 +53,5 @@
   ([] (-main "config.clj"))
   ([conf-file]
    (let [{:keys [server user channels plugins]} (read-string (slurp conf-file))
-         default-handlers [ cb-ping-pong ]
-         handlers (concat default-handlers (require-plugins plugins))]
+         handlers (conj (require-plugins plugins) cb-ping-pong)]
      (connect server user channels handlers))))
