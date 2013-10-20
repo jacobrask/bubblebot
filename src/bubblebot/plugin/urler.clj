@@ -5,7 +5,7 @@
             [com.ashafa.clutch :as couch]
             [clj-http.client :as http]
             [net.cgrand.enlive-html :as html]
-            [bubblebot.msg-builder :as cmd]))
+            [bubbleirc.msg-builder :as cmd]))
 
 (defn- save-url
   "Save URL in database"

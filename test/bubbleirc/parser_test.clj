@@ -1,6 +1,6 @@
-(ns bubblebot.parser-test
+(ns bubbleirc.parser-test
   (:require [clojure.test :refer :all]
-            [bubblebot.msg-parser :refer :all]))
+            [bubbleirc.msg-parser :refer :all]))
 
 (deftest parse-message-test
   (testing "Parse message"

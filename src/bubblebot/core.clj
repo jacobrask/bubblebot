@@ -1,8 +1,8 @@
 (ns bubblebot.core
   (:import (java.net Socket))
   (:require [clojure.java.io :as io]
-            [bubblebot.msg-builder :as cmd]
-            [bubblebot.msg-parser :refer [parse-message]]))
+            [bubbleirc.msg-builder :as cmd]
+            [bubbleirc.msg-parser :refer [parse-message]]))
 
 (defn- writer
   "Return a function to write a raw message (or a collection of messages)

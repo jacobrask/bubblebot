@@ -1,4 +1,4 @@
-(ns bubblebot.msg-builder
+(ns bubbleirc.msg-builder
   "Builds IRC message strings according to the
   IRC Client Protocol <http://tools.ietf.org/html/rfc2812>")
 

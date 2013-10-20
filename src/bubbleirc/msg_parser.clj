@@ -1,5 +1,5 @@
 ;; Parse an IRC message into useful bits and pieces.
-(ns bubblebot.msg-parser
+(ns bubbleirc.msg-parser
   (:require [clojure.string :as str]))
 
 (defn- get-trailing
