@@ -2,7 +2,7 @@
   (:import (java.net Socket))
   (:require [clojure.java.io :as io]
             [bubblebot.msg-builder :as cmd]
-            [bubblebot.msg-parser :refer [parse]]))
+            [bubblebot.msg-parser :refer [parse-message]]))
 
 (defn- writer
   "Return a function to write a raw message (or a collection of messages)
@@ -25,8 +25,8 @@
   [xs fs]
   (doseq [x xs] (doseq [f fs] (f x))))
 
-(defn- cb-ping-pong [{:keys [cmd raw]}]
-  (when (= cmd "PING") (cmd/pong raw)))
+(defn- cb-ping-pong [{:keys [command message]}]
+  (when (= command "PING") (cmd/pong message)))
 
 (defn connect
   "Connect to server and register plugin handlers"
@@ -34,7 +34,7 @@
   (let [conn (create-connection server)
         write (writer conn)
         fns (map #(comp write %) handlers)
-        lines (map parse (line-seq (:in @conn)))]
+        lines (map parse-message (line-seq (:in @conn)))]
     (.start (Thread. #(dodoseq lines fns)))
     (write (cmd/register-user user channels))
     conn))
