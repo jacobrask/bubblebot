@@ -5,6 +5,7 @@
             :url "http://www.eclipse.org/legal/epl-v10.html"}
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [com.ashafa/clutch "0.4.0-RC1"]
+                 [clucy "0.4.0"]
                  [clj-http "0.7.7"]
                  [enlive "1.1.4"]]
   :main bubblebot.core

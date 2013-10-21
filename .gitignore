@@ -2,6 +2,7 @@ config.clj
 *.log
 /target
 /classes
+/search
 /checkouts
 pom.xml
 pom.xml.asc

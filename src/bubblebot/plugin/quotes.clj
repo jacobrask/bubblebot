@@ -1,8 +1,13 @@
 (ns bubblebot.plugin.quotes
   (:require [clojure.string :refer [join trim]]
             [com.ashafa.clutch :as couch]
+            [clucy.core :as clucy]
             [bubblebot.cmd-parser :as cmd-parser]
             [bubbleirc.msg-builder :as cmd]))
+
+(def search-index (clucy/disk-index "search/quotes/"))
+
+(def index-quote (partial clucy/add search-index))
 
 (defn str->int [x]
   (try (Integer. (trim x)) (catch Exception _)))
@@ -13,6 +18,8 @@
   (when-let [db (-> "config.clj" slurp read-string :plugins :quotes :couch-url)]
     (first (couch/get-view db "quote" :text-by-num (conj {:limit 1} opts)))))
 
+(defn- quote-search [query] (clucy/search search-index query 1))
+
 (defn- format-quote
   [k v]
   (str "[" (cmd/bold k) "] " v))
@@ -22,6 +29,7 @@
   (let [n (inc (:key (quote-by-num {:descending true})))]
     (when-let [db (-> "config.clj" slurp read-string :plugins :quotes :couch-url)]
       (couch/put-document db (conj q {:num n}))
+      (index-quote {:num n, :text (:text q)})
       (str "Quote " (cmd/bold n) " added."))))
 
 (defn get-quote
@@ -36,13 +44,19 @@
       (when-let [q (quote-by-num {:descending true})]
         (format-quote (:key q) (:value q)))
     (= 1 (count which))
-     (if-let [q-num (str->int (first which))]
-       (if-let [q (quote-by-num {:key q-num})]
-         (format-quote (:key q) (:value q))
-         (str "No such quote: " (cmd/bold q-num)))
-       (str "No matches for \"" (join " " which) \"))
+     (let [word (first which)]
+       (if-let [q-num (str->int word)]
+        ; Quote search is numeric
+         (if-let [q (quote-by-num {:key q-num})]
+           (format-quote (:key q) (:value q))
+           (str "No such quote " (cmd/bold q-num)))
+         (if-let [q (first (quote-search word))]
+           (format-quote (:num q) (:text q))
+           (str "No matches for \"" word \"))))
     :else
-       (str "No matches for \"" (join " " which) \")))
+       (if-let [q (first (quote-search (join " " which)))]
+         (format-quote (:num q) (:text q))
+         (str "No matches for \"" (join " " which) \"))))
 
 (defn message-handler
   [{[chan] :middle, text :trailing, :keys [nick command]}]
