@@ -49,7 +49,7 @@
 
 (defn message-handler
   [{[chan] :middle, cmd :command, nick :nick, text :trailing}]
-  (when (= cmd "PRIVMSG")
+  (when (= "PRIVMSG" cmd)
     (when-let [url (find-url text)]
       (try
         (let [title (title-from-url url)]

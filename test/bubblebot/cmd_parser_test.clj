@@ -4,4 +4,5 @@
 
 (deftest cmd-parser-test
   (testing "Get Clojure map from IRC message"
-    (is (= (parse \! "!quote 123 456") {:cmd "quote" :params "123 456"}))))
+    (is (= (parse \! "!quote 123 456") {:bot-cmd "quote" :bot-args ["123" "456"]}))
+    (is (= (parse \! "abcdef 123") nil))))

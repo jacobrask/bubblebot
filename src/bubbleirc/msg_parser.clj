@@ -1,4 +1,5 @@
 ;; Parse an IRC message into useful bits and pieces.
+;; All comment annotations in Augmented Backus–Naur Form.
 (ns bubbleirc.msg-parser
   (:require [clojure.string :as str]))
 
@@ -14,18 +15,16 @@
   "Parse the prefix part of an IRC message"
   [pfx]
   (let [parts (rest (str/split pfx #":|!|@"))]
-    (if (< 1 (count parts))
-      (zipmap [:nick :user :host] parts)
-      {:servername (first parts)})))
+    (zipmap (if (< 1 (count parts)) [:nick :user :host] [:servername])
+            parts)))
 
-;; IRC message in Augmented Backus–Naur Form
 ;; message =  [ ":" prefix SPACE ] command [ params ] crlf
 ;; prefix  =  servername / ( nickname [ [ "!" user ] "@" host ] )
 ;; command =  1*letter / 3digit
 ;; params  =  *14( SPACE middle ) [ SPACE ":" trailing ]
 ;;         =/ 14( SPACE middle ) [ SPACE [ ":" ] trailing ]
 (defn parse-message
-  "Parse an IRC message to a map"
+  "Parse an IRC message to a map of components"
   [raw]
   (let [[part trail] (get-trailing raw)
         [pfx & [cmd & mid :as more]] (str/split part #" ")]

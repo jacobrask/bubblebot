@@ -6,4 +6,4 @@
   [pfx [one & text]]
   (when (= pfx one)
     (let [words (split (join text) #" ")]
-      {:cmd (first words) :params (join " " (rest words))})))
+      {:bot-cmd (first words) :bot-args (rest words)})))
