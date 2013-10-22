@@ -4,21 +4,21 @@
   (:require [clojure.string :as str]
             [com.ashafa.clutch :as couch]
             [clj-http.client :as http]
+            [clojure.tools.logging :as log]
             [net.cgrand.enlive-html :as html]
             [bubbleirc.msg-builder :as cmd]))
 
 (defn- save-url
-  "Save URL in database"
-  [data]
-  (when-let [db (-> "config.clj" slurp read-string :plugins :urler :couch-url)]
-    (couch/put-document db data)))
+  [db url]
+  (couch/put-document db url))
 
 (defn- fetch-url-content
   "Get the HTML content from an URL as a string. Returns nil for valid but
   non-HTML responses, throws otherwise."
   [url]
   (let [{:keys [status body headers]}
-         (http/get url {:headers {"Accept-Language" "en,en-us"}})]
+        (http/get url {:headers {"Accept-Language" "en,en-us"
+                                 "User-Agent" "Mozilla/5.0 (bubble url-title)"}})]
     (when (re-find #"^text\/html" (get headers "content-type")) body)))
 
 (defn- normalize-whitespace [s]
@@ -41,22 +41,24 @@
 
 (defn- short-url
   [url]
-  (if (> (count url) 25)
+  (if (> (count url) 40)
     (try
-      (:body (http/get (str "http://tinyurl.com/api-create.php?url=" url)))
-      (catch Exception e (prn (str "Couldn't shorten " url ": " (.getMessage e)))))
+      (:body (http/get (str "http://is.gd/create.php?format=simple&url=" url)))
+      (catch Exception ex (log/info (.getMessage ex))))
     url))
 
 (defn message-handler
-  [{[chan] :middle, cmd :command, nick :nick, text :trailing}]
+  [{[chan] :middle, cmd :command, nick :nick, text :trailing} {cfg :config}]
   (when (= "PRIVMSG" cmd)
     (when-let [url (find-url text)]
       (try
-        (let [title (title-from-url url)]
-          (save-url {:channel chan :url url
-                     :title title  :text text
-                     :nick nick    :date (System/currentTimeMillis)})
-          (if (str/blank? title)
-            (when (> (count url) 25) (cmd/msg chan (short-url url)))
-            (cmd/msg chan (str (cmd/bold title) " ("(short-url url)")"))))
-        (catch Exception e (prn (str "Couldn't fetch " url ": " (.getMessage e))))))))
+        (let [title (title-from-url url),
+              db (-> cfg :plugins :urler :couch-url)]
+          (save-url db {:channel chan :url url
+                        :title title  :text text
+                        :nick nick    :date (System/currentTimeMillis)})
+          (cmd/msg chan
+            (if (str/blank? title)
+              (when (> (count url) 40) (short-url url))
+              (str (cmd/bold title) " ("(short-url url)")"))))
+        (catch Exception ex (log/info (.getMessage ex) url))))))

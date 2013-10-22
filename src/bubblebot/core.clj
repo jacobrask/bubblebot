@@ -25,15 +25,16 @@
   [xs fs]
   (doseq [x xs] (doseq [f fs] (f x))))
 
-(defn- cb-ping-pong [{:keys [command message]}]
+(defn- cb-ping-pong [{:keys [command message]} _]
   (when (= command "PING") (cmd/pong message)))
 
 (defn connect
   "Connect to server and register plugin handlers"
-  [server user channels handlers]
+  [{:keys [server user channels] :as config} handlers]
   (let [conn (create-connection server)
         write (writer conn)
-        fns (map #(comp write %) handlers)
+        bot {:conn conn :config config}
+        fns (map (fn [h] (comp write #(h % bot))) handlers)
         lines (map parse-message (line-seq (:in @conn)))]
     (.start (Thread. #(dodoseq lines fns)))
     (write (cmd/register-user user channels))
@@ -52,6 +53,6 @@
 (defn -main
   ([] (-main "config.clj"))
   ([conf-file]
-   (let [{:keys [server user channels plugins]} (read-string (slurp conf-file))
-         handlers (conj (require-plugins plugins) cb-ping-pong)]
-     (connect server user channels handlers))))
+   (let [config (read-string (slurp conf-file))
+         handlers (conj (require-plugins (:plugins config)) cb-ping-pong)]
+     (connect config handlers))))

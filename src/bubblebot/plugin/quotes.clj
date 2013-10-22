@@ -24,7 +24,10 @@
   (when-let [db (-> "config.clj" slurp read-string :plugins :quotes :couch-url)]
     (first (couch/get-view db "quote" :text-by-num (conj {:limit 1} opts)))))
 
-(defn quote-search [query] (clucy/search search-index query 999))
+(defn quote-search [query]
+  (try
+    (clucy/search search-index query 999)
+    (catch Exception _)))
 
 (defn- format-quote [k v] (str "[" (cmd/bold k) "] " v))
 
@@ -63,7 +66,7 @@
          (str "No matches for \"" (join " " which) \"))))
 
 (defn message-handler
-  [{[chan] :middle, text :trailing, :keys [nick command]}]
+  [{[chan] :middle, text :trailing, :keys [nick command]} _]
   (when (= "PRIVMSG" command)
     (when-let [{:keys [bot-cmd bot-args]} (cmd-parser/parse \! text)]
       (cmd/msg chan
