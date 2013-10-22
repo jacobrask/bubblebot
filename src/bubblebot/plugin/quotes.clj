@@ -9,6 +9,12 @@
 
 (def index-quote (partial clucy/add search-index))
 
+(defn index-quotes []
+  (when-let [db (-> "config.clj" slurp read-string :plugins :quotes :couch-url)]
+    (doseq [q (couch/get-view db "quote" :text-by-num)]
+      (println (:value q))
+      (index-quote {:num (:key q) :text (:value q)}))))
+
 (defn str->int [x]
   (try (Integer. (trim x)) (catch Exception _)))
 
@@ -18,11 +24,9 @@
   (when-let [db (-> "config.clj" slurp read-string :plugins :quotes :couch-url)]
     (first (couch/get-view db "quote" :text-by-num (conj {:limit 1} opts)))))
 
-(defn- quote-search [query] (clucy/search search-index query 1))
+(defn- quote-search [query] (clucy/search search-index query 999))
 
-(defn- format-quote
-  [k v]
-  (str "[" (cmd/bold k) "] " v))
+(defn- format-quote [k v] (str "[" (cmd/bold k) "] " v))
 
 (defn add-quote
   [q]
@@ -50,11 +54,11 @@
          (if-let [q (quote-by-num {:key q-num})]
            (format-quote (:key q) (:value q))
            (str "No such quote " (cmd/bold q-num)))
-         (if-let [q (first (quote-search word))]
+         (if-let [q (rand-nth (quote-search word))]
            (format-quote (:num q) (:text q))
            (str "No matches for \"" word \"))))
     :else
-       (if-let [q (first (quote-search (join " " which)))]
+       (if-let [q (rand-nth (quote-search (join " " which)))]
          (format-quote (:num q) (:text q))
          (str "No matches for \"" (join " " which) \"))))
 
