@@ -1,5 +1,5 @@
 (ns bubblebot.plugin.quotes
-  (:require [clojure.string :refer [join trim]]
+  (:require [clojure.string :refer [join trim] :as str]
             [com.ashafa.clutch :as couch]
             [clucy.core :as clucy]
             [bubblebot.cmd-parser :as cmd-parser]
@@ -29,7 +29,9 @@
     (clucy/search search-index query 999)
     (catch Exception _)))
 
-(defn- format-quote [k v] (str "[" (cmd/bold k) "] " v))
+(defn- format-quote
+  [n text]
+  (str "[" (cmd/bold n) "] " (str/replace text #"[\n\r]" " ")))
 
 (defn add-quote
   [q]

@@ -10,7 +10,7 @@
 
 (defn- save-url
   [db url]
-  (couch/put-document db url))
+  (when db (couch/put-document db url)))
 
 (defn- fetch-url-content
   "Get the HTML content from an URL as a string. Returns nil for valid but
