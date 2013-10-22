@@ -18,13 +18,13 @@
 (defn str->int [x]
   (try (Integer. (trim x)) (catch Exception _)))
 
-(defn- quote-by-num
+(defn quote-by-num
   "Save URL in database"
   [opts]
   (when-let [db (-> "config.clj" slurp read-string :plugins :quotes :couch-url)]
     (first (couch/get-view db "quote" :text-by-num (conj {:limit 1} opts)))))
 
-(defn- quote-search [query] (clucy/search search-index query 999))
+(defn quote-search [query] (clucy/search search-index query 999))
 
 (defn- format-quote [k v] (str "[" (cmd/bold k) "] " v))
 
@@ -50,17 +50,17 @@
     (= 1 (count which))
      (let [word (first which)]
        (if-let [q-num (str->int word)]
-        ; Quote search is numeric
+         ; Quote search is numeric
          (if-let [q (quote-by-num {:key q-num})]
            (format-quote (:key q) (:value q))
            (str "No such quote " (cmd/bold q-num)))
-         (if-let [q (rand-nth (quote-search word))]
-           (format-quote (:num q) (:text q))
-           (str "No matches for \"" word \"))))
+         (if-let [q (seq (quote-search word))]
+           (let [q (rand-nth q)] (format-quote (:num q) (:text q)))
+           (str "No matches for \"" word \")))
     :else
-       (if-let [q (rand-nth (quote-search (join " " which)))]
-         (format-quote (:num q) (:text q))
-         (str "No matches for \"" (join " " which) \"))))
+       (if-let [q (seq (quote-search (join " " which)))]
+         (let [q (rand-nth q)] (format-quote (:num q) (:text q)))
+         (str "No matches for \"" (join " " which) \")))))
 
 (defn message-handler
   [{[chan] :middle, text :trailing, :keys [nick command]}]
