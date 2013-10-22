@@ -32,7 +32,7 @@
 
 (defn find-url
   [s]
-  (re-find #"https?:\/\/[a-zA-Z0-9\-\._\?,\/\\\+%\$#=~]+" s))
+  (re-find #"https?:\/\/[a-zA-Z0-9\-\._\?,\/\\\+%&\$#=~]+" s))
 
 (defn- title-from-url
   [url]
