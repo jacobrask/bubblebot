@@ -54,13 +54,13 @@
          (if-let [q (quote-by-num {:key q-num})]
            (format-quote (:key q) (:value q))
            (str "No such quote " (cmd/bold q-num)))
-         (if-let [q (seq (quote-search word))]
-           (let [q (rand-nth q)] (format-quote (:num q) (:text q)))
-           (str "No matches for \"" word \")))
+         (if-let [qs (seq (quote-search word))]
+           (let [q (rand-nth qs)] (format-quote (:num q) (:text q)))
+           (str "No matches for \"" word \"))))
     :else
-       (if-let [q (seq (quote-search (join " " which)))]
-         (let [q (rand-nth q)] (format-quote (:num q) (:text q)))
-         (str "No matches for \"" (join " " which) \")))))
+       (if-let [qs (seq (quote-search (join " " which)))]
+         (let [q (rand-nth qs)] (format-quote (:num q) (:text q)))
+         (str "No matches for \"" (join " " which) \"))))
 
 (defn message-handler
   [{[chan] :middle, text :trailing, :keys [nick command]}]
