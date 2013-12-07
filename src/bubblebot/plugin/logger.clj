@@ -1,3 +1,3 @@
 (ns bubblebot.plugin.logger)
 
-(defn message-handler [{:keys [message]} _] (println message))
+(defn message-handler [{msg :message} _] (println msg))

@@ -39,7 +39,7 @@
   (when-let [body (fetch-url-content url)]
     (find-title body)))
 
-(defn- short-url
+(defn- shorten-url
   [url]
   (if (> (count url) 40)
     (try
@@ -59,6 +59,6 @@
                         :nick nick    :date (System/currentTimeMillis)})
           (cmd/msg chan
             (if (str/blank? title)
-              (when (> (count url) 40) (short-url url))
-              (str (cmd/bold title) " ("(short-url url)")"))))
+              (when (> (count url) 40) (shorten-url url))
+              (str (cmd/bold title) " ("(shorten-url url)")"))))
         (catch Exception ex (log/info (.getMessage ex) url))))))
